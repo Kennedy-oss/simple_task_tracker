@@ -1,5 +1,5 @@
 import click
-from models.models import User, Category, Task
+from models import User, Category, Task
 from sqlalchemy.orm import sessionmaker
 from database import Session  # Import the sessionmaker instance
 # Initialize the database (create tables)
