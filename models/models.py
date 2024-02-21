@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, Boolean, func
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime
@@ -48,4 +48,6 @@ Session = sessionmaker(bind=engine)
 def init_db():
     Base.metadata.create_all(engine)
 
+if __name__ == "__main__":
+    init_db()
 

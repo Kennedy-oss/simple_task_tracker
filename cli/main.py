@@ -1,48 +1,94 @@
 import click
+from models.models import User, Category, Task
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
-# Import the Base class and your models
-from models.models import Base, Task
+from database import Session  # Import the sessionmaker instance
+# Initialize the database (create tables)
+init_db()
 
-# Setup database connection and sessionmaker
-engine = create_engine('sqlite:///simple_task_tracker.db', echo=True)
-Session = sessionmaker(bind=engine)
+# Create a new database session for operations
+session = Session()
 
 @click.group()
 def cli():
-    """Simple Task Tracker CLI."""
+    """Task Tracker CLI"""
     pass
 
 @cli.command()
+@click.argument('username')
+def add_user(username):
+    """Add a new user"""
+    session = Session()
+    user = User(username=username)
+    session.add(user)
+    try:
+        session.commit()
+        click.echo(f"User '{username}' added successfully.")
+    except:
+        session.rollback()
+        click.echo(f"Failed to add user '{username}'.")
+    finally:
+        session.close()
+
+@cli.command()
+@click.argument('name')
+def add_category(name):
+    """Add a new category"""
+    session = Session()
+    category = Category(name=name)
+    session.add(category)
+    try:
+        session.commit()
+        click.echo(f"Category '{name}' added successfully.")
+    except:
+        session.rollback()
+        click.echo(f"Failed to add category '{name}'.")
+    finally:
+        session.close()
+
+@cli.command()
+@click.argument('title')
+@click.option('--description', default='')
+@click.option('--user_id', type=int)
+@click.option('--category_id', type=int)
+def add_task(title, description, user_id, category_id):
+    """Add a new task"""
+    session = Session()
+    task = Task(title=title, description=description, user_id=user_id, category_id=category_id)
+    session.add(task)
+    try:
+        session.commit()
+        click.echo(f"Task '{title}' added successfully.")
+    except:
+        session.rollback()
+        click.echo(f"Failed to add task '{title}'.")
+    finally:
+        session.close()
+
+@cli.command()
 def list_tasks():
-    """Lists all tasks."""
+    """List all tasks"""
     session = Session()
     tasks = session.query(Task).all()
     for task in tasks:
         click.echo(f'{task.id}: {task.title} | Status: {task.status} (Created at: {task.formatted_date})')
-
-@cli.command()
-@click.argument('title')
-@click.option('--description', default='', help='Description of the task')
-def add_task(title, description):
-    """Adds a new task with the given TITLE and optional DESCRIPTION."""
-    session = Session()
-    task = Task(title=title, description=description)
-    session.add(task)
-    session.commit()
-    click.echo(f'Task "{title}" added successfully.')
+    session.close()
 
 @cli.command()
 @click.argument('task_id', type=int)
 def toggle_task_status(task_id):
-    """Toggles the completion status of a task."""
+    """Toggle the completion status of a task"""
     session = Session()
     task = session.query(Task).get(task_id)
     if task:
         task.toggle_status()
         session.commit()
-        click.echo(f'Task "{task.title}" status toggled to {task.status}.')
+        click.echo(f"Task '{task.title}' status toggled to {task.status}.")
     else:
         click.echo('Task not found.')
+    session.close()
+
+if __name__ == '__main__':
+    cli()
+
 
 
