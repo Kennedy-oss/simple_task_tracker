@@ -1,12 +1,28 @@
+import sys
+import os
 import click
-from models import User, Category, Task
-from sqlalchemy.orm import sessionmaker
-from database import Session  # Import the sessionmaker instance
+from sqlalchemy import create_engine
+from sqlalchemy.orm import scoped_session, sessionmaker
+from sqlalchemy.orm import declarative_base
+
+# Database setup
+engine = create_engine('sqlite:///simple_task_tracker.db')
+db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
+
+Base = declarative_base()
+Base.query = db_session.query_property()
+
+def init_db():
+    # Import all models here to ensure they are attached to the Base.metadata
+    from models.models import User, Category, Task  # Adjust the import path as needed
+    Base.metadata.create_all(bind=engine)
+
+# Correctly add the project root to the sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from models.models import User, Category, Task
 # Initialize the database (create tables)
 init_db()
-
-# Create a new database session for operations
-session = Session()
 
 @click.group()
 def cli():
@@ -17,15 +33,15 @@ def cli():
 @click.argument('username')
 def add_user(username):
     """Add a new user"""
-    session = Session()
+    session = db_session()
     user = User(username=username)
     session.add(user)
     try:
         session.commit()
         click.echo(f"User '{username}' added successfully.")
-    except:
+    except Exception as e:
         session.rollback()
-        click.echo(f"Failed to add user '{username}'.")
+        click.echo(f"Failed to add user '{username}'. Reason: {e}")
     finally:
         session.close()
 
@@ -33,15 +49,15 @@ def add_user(username):
 @click.argument('name')
 def add_category(name):
     """Add a new category"""
-    session = Session()
+    session = db_session()
     category = Category(name=name)
     session.add(category)
     try:
         session.commit()
         click.echo(f"Category '{name}' added successfully.")
-    except:
+    except Exception as e:
         session.rollback()
-        click.echo(f"Failed to add category '{name}'.")
+        click.echo(f"Failed to add category '{name}'. Reason: {e}")
     finally:
         session.close()
 
@@ -52,22 +68,22 @@ def add_category(name):
 @click.option('--category_id', type=int)
 def add_task(title, description, user_id, category_id):
     """Add a new task"""
-    session = Session()
+    session = db_session()
     task = Task(title=title, description=description, user_id=user_id, category_id=category_id)
     session.add(task)
     try:
         session.commit()
         click.echo(f"Task '{title}' added successfully.")
-    except:
+    except Exception as e:
         session.rollback()
-        click.echo(f"Failed to add task '{title}'.")
+        click.echo(f"Failed to add task '{title}'. Reason: {e}")
     finally:
         session.close()
 
 @cli.command()
 def list_tasks():
     """List all tasks"""
-    session = Session()
+    session = db_session()
     tasks = session.query(Task).all()
     for task in tasks:
         click.echo(f'{task.id}: {task.title} | Status: {task.status} (Created at: {task.formatted_date})')
@@ -77,7 +93,7 @@ def list_tasks():
 @click.argument('task_id', type=int)
 def toggle_task_status(task_id):
     """Toggle the completion status of a task"""
-    session = Session()
+    session = db_session()
     task = session.query(Task).get(task_id)
     if task:
         task.toggle_status()
@@ -89,6 +105,4 @@ def toggle_task_status(task_id):
 
 if __name__ == '__main__':
     cli()
-
-
 
